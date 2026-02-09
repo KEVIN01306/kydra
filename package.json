@@ -1,0 +1,20 @@
+{
+  "name": "@kydra/root",
+  "private": true,
+  "description": "Ecosistema Modular Kydra - UI, Auth & Fullstack Templates",
+  "workspaces": [
+    "packages/*",
+    "templates/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "typescript": "^5.0.0",
+    "prettier": "^3.0.0"
+  }
+}
