@@ -1,7 +1,9 @@
 import React, { 
   useState, 
   useMemo, 
-  useRef,  
+  useRef,
+  useContext,
+  createContext
 } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -17,11 +19,22 @@ import {
   ArrowUpDown,
   Inbox,
   Download,
-  LucideIcon
+  LucideIcon,
 } from 'lucide-react';
-import { Input } from './Input';
+import { Input } from './Input/Input';
+import { CheckBox } from './CheckBox/CheckBox';
+import { Button } from './Button/Button';
 
-// --- Types & Interfaces ---
+// --- Contexto para el Tema ---
+interface TableTheme {
+  darkMode: boolean;
+  color: string;
+}
+
+const TableContext = createContext<TableTheme>({ darkMode: false, color: '#2563eb' });
+const useTableTheme = () => useContext(TableContext);
+
+// --- Tipos e Interfaces ---
 
 export interface TableAction<T> {
   label: string;
@@ -63,34 +76,29 @@ interface Identifiable {
   id: string | number;
 }
 
+// --- Componentes de Fila y Acción ---
+
 const TableRow = React.memo(<T extends Identifiable>({ 
   row, 
   columns, 
-  color, 
   selectable,
   isSelected, 
   onSelect 
 }: {
   row: T;
   columns: TableColumn<T>[];
-  color: string;
   selectable: boolean;
   isSelected: boolean;
   onSelect: (id: string | number) => void;
 }) => {
+  const { color } = useTableTheme();
   const alignmentClasses = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
   return (
     <tr className="group transition-colors duration-150 hover:bg-[var(--highlight)]/5">
       {selectable && (
         <td className="px-6 py-4 border-b border-transparent">
-          <input 
-            type="checkbox" 
-            checked={isSelected}
-            onChange={() => onSelect(row.id)}
-            style={{ '--accent': color } as React.CSSProperties}
-            className="w-4 h-4 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
-          />
+            <CheckBox color={color} value={isSelected} onChange={() => onSelect(row.id)}/>
         </td>
       )}
       {columns.filter(c => !c.hidden).map((col) => (
@@ -104,11 +112,11 @@ const TableRow = React.memo(<T extends Identifiable>({
           `}
         >
           {col.actions ? (
-            <ActionButton actions={col.actions} row={row} highlightColor={color} />
+            <ActionButton actions={col.actions} row={row} />
           ) : col.format ? (
             col.format(row[col.accessor], row, color)
           ) : (
-            String(row[col.accessor])
+            String(row[col.accessor] ?? '')
           )}
         </td>
       ))}
@@ -116,18 +124,14 @@ const TableRow = React.memo(<T extends Identifiable>({
   );
 });
 
-/**
- * Actions Dropdown with Portal
- */
-const DropdownPortal = <T,>({ isOpen, onClose, anchorRect, actions, row, highlightColor, darkMode }: {
+const DropdownPortal = <T,>({ isOpen, onClose, anchorRect, actions, row }: {
   isOpen: boolean;
   onClose: () => void;
   anchorRect: DOMRect | null;
   actions: TableAction<T>[];
   row: T;
-  highlightColor: string;
-  darkMode: boolean;
 }) => {
+  const { darkMode, color } = useTableTheme();
   if (!isOpen || !anchorRect) return null;
 
   const style: React.CSSProperties = {
@@ -138,7 +142,7 @@ const DropdownPortal = <T,>({ isOpen, onClose, anchorRect, actions, row, highlig
   };
 
   return createPortal(
-    <div className={darkMode ? 'dark' : ''} style={{ '--highlight': highlightColor } as React.CSSProperties}>
+    <div className={darkMode ? 'dark' : ''} style={{ '--highlight': color } as React.CSSProperties}>
       <div className="fixed inset-0 z-[9998]" onClick={onClose} />
       <div 
         style={style}
@@ -165,7 +169,7 @@ const DropdownPortal = <T,>({ isOpen, onClose, anchorRect, actions, row, highlig
   );
 };
 
-const ActionButton = <T,>({ actions, row, highlightColor, darkMode }: { actions: TableAction<T>[], row: T, highlightColor: string, darkMode?: boolean }) => {
+const ActionButton = <T,>({ actions, row }: { actions: TableAction<T>[], row: T }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -193,16 +197,13 @@ const ActionButton = <T,>({ actions, row, highlightColor, darkMode }: { actions:
         anchorRect={anchorRect} 
         actions={actions} 
         row={row} 
-        highlightColor={highlightColor} 
-        darkMode={!!darkMode}
       />
     </>
   );
 };
 
-/**
- * Main Table Component
- */
+// --- Componente Principal ---
+
 export const Table = <T extends Identifiable>({ 
   data = [], 
   columns = [], 
@@ -219,13 +220,15 @@ export const Table = <T extends Identifiable>({
   excelExport = false, 
   onDeleteRows = () => {},
   emptyState: CustomEmptyState,
-  darkMode = false // Propiedad recibida
+  darkMode = false
 }: TableProps<T>) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: keyof T | null, direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
+
+  const themeValue = useMemo(() => ({ darkMode, color }), [darkMode, color]);
 
   const handleSort = (key: keyof T) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -238,7 +241,7 @@ export const Table = <T extends Identifiable>({
     if (filter && searchTerm) {
       const searchableAccessors = columns.filter(c => c.filter).map(c => c.accessor);
       result = result.filter(row => 
-        searchableAccessors.some(acc => String(row[acc]).toLowerCase().includes(searchTerm.toLowerCase()))
+        searchableAccessors.some(acc => String(row[acc] ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     if (sortConfig.key) {
@@ -259,7 +262,7 @@ export const Table = <T extends Identifiable>({
     : processedData;
 
   const toggleSelectAll = () => {
-    if (selectedRows.size === currentData.length) {
+    if (currentData.length > 0 && selectedRows.size === currentData.length) {
       setSelectedRows(new Set());
     } else {
       setSelectedRows(new Set(currentData.map(r => r.id)));
@@ -279,7 +282,7 @@ export const Table = <T extends Identifiable>({
     const rows = processedData.map(row => 
       visibleColumns.map(c => {
         const val = row[c.accessor];
-        return `"${String(val).replace(/"/g, '""')}"`;
+        return `"${String(val ?? '').replace(/"/g, '""')}"`;
       }).join(',')
     ).join('\n');
 
@@ -297,158 +300,157 @@ export const Table = <T extends Identifiable>({
   const alignmentClasses = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
   return (
-    <div className={`flex flex-col gap-4 ${darkMode ? 'dark' : ''}`} style={{ '--highlight': color } as React.CSSProperties}>
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex flex-1 gap-4 w-full sm:w-auto">
-          {filter && (
-            <div className="w-full sm:max-w-xs">
-              <Input 
-                icon={Search}
-                color={color}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={filterPlaceholder}
-                onClear={() => setSearchTerm("")}
-                darkMode={darkMode}
-              />
-            </div>
-          )}
-          
-          {selectable && selectedRows.size > 0 && (
-            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4">
-              <span className="text-sm font-bold text-slate-500 hidden md:inline">{selectedRows.size} seleccionados</span>
-              <button 
-                onClick={() => { onDeleteRows(Array.from(selectedRows)); setSelectedRows(new Set()); }}
-                className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 border border-red-100 dark:border-red-500/20"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Eliminar</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {excelExport && (
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 whitespace-nowrap w-full sm:w-auto shadow-emerald-600/20"
-            >
-              <Download className="w-4 h-4" />
-              <span>Exportar</span>
-            </button>
-          )}
-
-          {add && (
-            <button
-              onClick={actionAdd}
-              style={{ backgroundColor: 'var(--highlight)' }}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 hover:opacity-90 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95 whitespace-nowrap w-full sm:w-auto shadow-[var(--highlight)]/20"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{textAdd}</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-slate-50/50 dark:bg-slate-950/40">
-              <tr>
-                {selectable && (
-                  <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 w-10 text-left">
-                    <input 
-                      type="checkbox" 
-                      onChange={toggleSelectAll}
-                      checked={currentData.length > 0 && selectedRows.size === currentData.length}
-                      style={{ '--accent': color } as React.CSSProperties}
-                      className="w-4 h-4 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
-                    />
-                  </th>
-                )}
-                {columns.filter(c => !c.hidden).map((col) => (
-                  <th
-                    key={String(col.accessor)}
-                    onClick={() => handleSort(col.accessor)}
-                    className={`
-                      px-6 py-4 font-bold uppercase tracking-tight text-slate-500 dark:text-slate-400
-                      ${alignmentClasses[col.align || 'left']}
-                      border-b border-slate-100 dark:border-slate-800 cursor-pointer select-none group/th
-                    `}
-                  >
-                    <div className={`flex items-center gap-2 ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : ''}`}>
-                      {col.header}
-                      <span className={`transition-colors ${sortConfig.key === col.accessor ? 'text-[var(--highlight)]' : 'text-slate-300 opacity-0 group-hover/th:opacity-100'}`}>
-                        {sortConfig.key === col.accessor 
-                          ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)
-                          : <ArrowUpDown className="w-3 h-3" />
-                        }
-                      </span>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {currentData.length > 0 ? (
-                currentData.map((row) => (
-                  <TableRow 
-                    key={row.id} 
-                    row={row} 
-                    columns={columns as any} 
-                    color={color} 
-                    selectable={selectable}
-                    isSelected={selectedRows.has(row.id)}
-                    onSelect={toggleSelectRow}
-                  />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={columns.length + (selectable ? 1 : 0)}>
-                    {CustomEmptyState ? <CustomEmptyState /> : (
-                      <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-                        <Inbox className="w-12 h-12 opacity-20" />
-                        <p className="font-medium italic">No se encontraron registros para mostrar</p>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {pagination && processedData.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
-          <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2">
-              <span>Mostrar</span>
-              <div className="relative">
-                <select 
-                  value={pageSize}
-                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                  className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]/20 cursor-pointer text-slate-700 dark:text-slate-300 font-bold"
+    <TableContext.Provider value={themeValue}>
+      <div className={`flex flex-col gap-4 w-full ${darkMode ? 'dark' : ''}`} style={{ '--highlight': color } as React.CSSProperties}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-1 gap-4 w-full sm:w-auto">
+            {filter && (
+              <div className="w-full sm:max-w-xs">
+                {/* Usamos el InternalInput para evitar errores de compilación por archivos inexistentes */}
+                <Input 
+                  icon={Search}
+                  color={color}
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  label={filterPlaceholder}
+                  onClear={() => setSearchTerm("")}
+                />
+              </div>
+            )}
+            
+            {selectable && selectedRows.size > 0 && (
+              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4">
+                <span className="text-sm font-bold text-slate-500 hidden md:inline">{selectedRows.size} seleccionados</span>
+                <button 
+                  onClick={() => { onDeleteRows(Array.from(selectedRows)); setSelectedRows(new Set()); }}
+                  className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 px-4 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 border border-red-100 dark:border-red-500/20"
                 >
-                  {customArrayPagination.map(size => <option key={size} value={size}>{size}</option>)}
-                </select>
-                <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {excelExport && (
+              <Button
+                onClick={handleExportCSV}
+                color='green'
+                icon={<Download className="w-4 h-4" />}
+                label='Exportar'
+              >
+                
+              </Button>
+            )}
+
+            {add && (
+                <>
+                <Button
+                    onClick={actionAdd}
+                    kd={{ backgroundColor: 'var(--highlight)'}}
+                    icon={<Plus className="w-4 h-4" />}
+                    label={textAdd}
+                    >
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-0 text-sm">
+              <thead className="bg-slate-50/50 dark:bg-slate-950/40">
+                <tr>
+                  {selectable && (
+                    <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 w-10 text-left">
+                        <CheckBox color={color} value={currentData.length > 0 && selectedRows.size === currentData.length} onChange={toggleSelectAll}/>
+                    </th>
+                  )}    
+                  {columns.filter(c => !c.hidden).map((col) => (
+                    <th
+                      key={String(col.accessor)}
+                      onClick={() => handleSort(col.accessor)}
+                      className={`
+                        px-6 py-4 font-bold uppercase tracking-tight text-slate-500 dark:text-slate-400
+                        ${alignmentClasses[col.align || 'left']}
+                        border-b border-slate-100 dark:border-slate-800 cursor-pointer select-none group/th
+                      `}
+                    >
+                      <div className={`flex items-center gap-2 ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : ''}`}>
+                        {col.header}
+                        <span className={`transition-colors ${sortConfig.key === col.accessor ? 'text-[var(--highlight)]' : 'text-slate-300 opacity-0 group-hover/th:opacity-100'}`}>
+                          {sortConfig.key === col.accessor 
+                            ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)
+                            : <ArrowUpDown className="w-3 h-3" />
+                          }
+                        </span>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {currentData.length > 0 ? (
+                  currentData.map((row) => (
+                    <TableRow 
+                      key={row.id} 
+                      row={row} 
+                      columns={columns as any} 
+                      selectable={selectable}
+                      isSelected={selectedRows.has(row.id)}
+                      onSelect={toggleSelectRow}
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length + (selectable ? 1 : 0)}>
+                      {CustomEmptyState ? <CustomEmptyState /> : (
+                        <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                          <Inbox className="w-12 h-12 opacity-20" />
+                          <p className="font-medium italic">No se encontraron registros para mostrar</p>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {pagination && processedData.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
+            <div className="flex items-center gap-4">
+               <div className="flex items-center gap-2">
+                <span>Mostrar</span>
+                <div className="relative">
+                  <select 
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]/20 cursor-pointer text-slate-700 dark:text-slate-300 font-bold"
+                  >
+                    {customArrayPagination.map(size => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-            <div className="flex items-center gap-1 min-w-[60px] justify-center">
-              <span className="font-bold text-[var(--highlight)]">{currentPage}</span>
-              <span className="opacity-30">/</span>
-              <span>{totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+              <div className="flex items-center gap-1 min-w-[60px] justify-center">
+                <span className="font-bold text-[var(--highlight)]">{currentPage}</span>
+                <span className="opacity-30">/</span>
+                <span>{totalPages}</span>
+              </div>
+              <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"><ChevronRight className="w-4 h-4" /></button>
             </div>
-            <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"><ChevronRight className="w-4 h-4" /></button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TableContext.Provider>
   );
 };
+
+export default Table;

@@ -1,2 +1,5 @@
 export * from './components/Table'
-export * from './components/Input'
+export * from './components/Input/index'
+export * from './components/CheckBox/index'
+export * from './components/Button/index'
+export * from './components/Nav'

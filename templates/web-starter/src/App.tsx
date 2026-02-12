@@ -1,4 +1,4 @@
-import { Table, TableColumn } from '@kydra/ui';
+import { Button, Navbar, NavbarPosition, Table, TableColumn } from '@kydra/ui';
 import { useState } from 'react';
 import { 
   Trash2, 
@@ -6,17 +6,6 @@ import {
   Sun,
   Moon, 
 } from 'lucide-react';
-
-const data = [
-  { id: 1, name: 'Kevin', role: 'Founder' },
-  { id: 2, name: 'Kydra', role: 'Framework' },
-];
-
-const columns = [
-  { header: 'ID', accessor: 'id' },
-  { header: 'Nombre', accessor: 'name' },
-  { header: 'Rol', accessor: 'role' },
-];
 
 interface Identifiable {
   id: string | number;
@@ -28,7 +17,6 @@ interface UserData extends Identifiable {
   salary: number;
 }
 
-
 export default function App() {
     const [isDarkMode, setIsDarkMode] = useState(true);
   const [accentColor, setAccentColor] = useState("#2563eb");
@@ -39,7 +27,9 @@ export default function App() {
     status: ['Activo', 'Pendiente', 'Inactivo'][i % 3],
     salary: Math.floor(Math.random() * 50000) + 20000
   })));
-
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [navPosition, setNavPosition] = useState<NavbarPosition>("static");
+  const [isNavDominant, setIsNavDominant] = useState(false);
   const columns: TableColumn<UserData>[] = [
     { 
       header: 'Usuario', 
@@ -69,10 +59,28 @@ export default function App() {
     ]}
   ];
   return (
-    <div className={`${isDarkMode ? 'dark' : ''}`}> {/* Si quitas "dark", vuelve al modo claro */}
+    <div className={`${isDarkMode ? 'dark' : ''} dark:bg-slate-950`}> {/* Si quitas "dark", vuelve al modo claro */}
+        <Navbar 
+        title={
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold" style={{ backgroundColor: accentColor }}>K</div>
+            <span>Kydra UI</span>
+          </div>
+        }
+        position={navPosition}
+        color={accentColor}
+        colorDominant={isNavDominant}
+        isMenuOpen={isNavMenuOpen}
+        onToggleMenu={() => setIsNavMenuOpen(!isNavMenuOpen)}
+      >
+        <a href="#" className="text-sm font-medium hover:opacity-70">Docs</a>
+        <a href="#" className="text-sm font-medium hover:opacity-70">Github</a>
+        <Button label="Login" kd={{ minWidth: 'auto', padding: '0.5rem 1rem', fontSize: '0.875rem' }} color={isNavDominant ? 'white' : accentColor} variant={isNavDominant ? 'ghost-hover' : 'filled'} />
+      </Navbar>
       <div className="min-h-screen bg-white p-10 dark:bg-slate-950">
         <div className={`p-6 rounded-3xl border flex items-center justify-between transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
           <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Gestión de Usuarios</h1>
+          <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} />
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:opacity-80 transition-all"
@@ -80,7 +88,7 @@ export default function App() {
             {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
           </button>
         </div>
-        <h1 className="text-2xl font-bold dark:text-white">Kydra Dashboard</h1>
+        <h1 className="text-2xl font-bold dark:text-white m-3">Kydra Dashboard</h1>
          <Table 
           data={localData} 
           columns={columns} 
@@ -89,6 +97,8 @@ export default function App() {
           add={true}
           darkMode={isDarkMode} // <--- Propiedad enviada aquí
           color={accentColor}
+          customArrayPagination={[5,25]}
+          defaultPageSize={5}
           excelExport={true}
           onDeleteRows={(ids) => setLocalData(d => d.filter(x => !ids.includes(x.id)))}
         />
