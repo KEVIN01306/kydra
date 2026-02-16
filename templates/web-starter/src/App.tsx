@@ -1,4 +1,4 @@
-import { Button, Navbar, NavbarPosition, Table, TableColumn } from '@kydra/ui';
+import { Button, CheckBox, Navbar, NavbarPosition, Table, TableColumn } from '@kydra/ui';
 import { useState } from 'react';
 import { 
   Trash2, 
@@ -47,12 +47,13 @@ export default function App() {
       header: 'Estado', 
       accessor: 'status', 
       align: 'center',
+      filter: true,
       format: (val: string, _, highlight) => {
         const isActive = val === 'Activo';
         return <span style={isActive ? { backgroundColor: `${highlight}15`, color: highlight } : {}} className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${!isActive ? 'bg-slate-100 text-slate-500 dark:bg-slate-800/50' : ''}`}>{val}</span>;
       }
     },
-    { header: 'Salario', accessor: 'salary', align: 'right', format: (val: number) => <span className="font-mono">${val.toLocaleString()}</span> },
+    { header: 'Salario', accessor: 'salary', align: 'right',filter: true, format: (val: number) => <span className="font-mono">${val.toLocaleString()}</span> },
     { header: 'Acciones', accessor: 'id', align: 'right', actions: [
       { label: 'Detalles', icon: Eye, onClick: (r: any) => console.log(r) },
       { label: 'Borrar', icon: Trash2, onClick: (r: any) => setLocalData(d => d.filter(x => x.id !== r.id)), color: 'text-red-500' },
@@ -76,6 +77,7 @@ export default function App() {
         <a href="#" className="text-sm font-medium hover:opacity-70">Docs</a>
         <a href="#" className="text-sm font-medium hover:opacity-70">Github</a>
         <Button label="Login" kd={{ minWidth: 'auto', padding: '0.5rem 1rem', fontSize: '0.875rem' }} color={isNavDominant ? 'white' : accentColor} variant={isNavDominant ? 'ghost-hover' : 'filled'} />
+        <CheckBox label='boton de login' value={true} color={accentColor} />
       </Navbar>
       <div className="min-h-screen bg-white p-10 dark:bg-slate-950">
         <div className={`p-6 rounded-3xl border flex items-center justify-between transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -97,8 +99,9 @@ export default function App() {
           add={true}
           darkMode={isDarkMode} // <--- Propiedad enviada aquí
           color={accentColor}
-          customArrayPagination={[5,25]}
+          customArrayPagination={[5,30,40,50,100]}
           defaultPageSize={5}
+          pagination={true}
           excelExport={true}
           onDeleteRows={(ids) => setLocalData(d => d.filter(x => !ids.includes(x.id)))}
         />
