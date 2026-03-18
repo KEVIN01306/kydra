@@ -20,7 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   ...props
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) onChange(e.target.value);
   };
@@ -29,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 
   const getVariantClasses = () => {
     const base = "block w-full text-sm transition-all outline-none dark:text-white";
-    
+
     switch (variant) {
       case 'filled':
         return `${base} pt-6 pb-3 px-4 bg-slate-100 dark:bg-slate-800 border-b-2 border-transparent rounded-t-xl focus:bg-slate-50 dark:focus:bg-slate-900 focus:border-[var(--highlight)] ${error ? 'border-red-400 bg-red-50 dark:bg-red-950/20' : ''}`;
@@ -39,8 +39,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       default:
         // Ajustado: Se eliminan las clases por defecto de Tailwind de ring para usar el color dinámico en el borde de focus
         return `${base} py-3.5 px-4 bg-white dark:bg-slate-900 border rounded-xl 
-          ${error 
-            ? 'border-red-400 focus:border-red-500 ring-0 focus:ring-2 focus:ring-red-500/10' 
+          ${error
+            ? 'border-red-400 focus:border-red-500 ring-0 focus:ring-2 focus:ring-red-500/10'
             : 'border-slate-200 dark:border-slate-800 focus:border-[var(--highlight)] ring-0 focus:ring-2 focus:ring-[var(--highlight)]/20'}`;
     }
   };
@@ -48,22 +48,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`} style={{ '--highlight': color } as CSSProperties}>
       <div className="relative flex items-center group">
-        
+
         {/* Label Flotante - Ajustado simétricamente */}
         {label && (
-          <label 
+          <label
             className={`
               absolute pointer-events-none transition-all duration-200 ease-in-out z-20
-              ${isFloating 
-                ? `text-[10px] font-bold uppercase tracking-wider ${error ? 'text-red-500' : 'text-[var(--highlight)]'}` 
+              ${isFloating
+                ? `text-[10px] font-bold uppercase tracking-wider ${error ? 'text-red-500' : 'text-[var(--highlight)]'}`
                 : 'text-sm font-medium text-slate-400'}
               
               /* Alineación Horizontal: Uniforme en standard y filled */
               ${variant === 'underlined' ? 'left-0' : 'left-4'}
 
               /* Posicionamiento Vertical */
-              ${variant === 'standard' 
-                ? (isFloating ? '-top-2 px-1.5 bg-white dark:bg-slate-900 translate-x-[-4px]' : 'top-1/2 -translate-y-1/2') 
+              ${variant === 'standard'
+                ? (isFloating ? '-top-2 px-1.5 bg-white dark:bg-slate-900 translate-x-[-4px]' : 'top-1/2 -translate-y-1/2')
                 : (isFloating ? 'top-1.5' : 'top-[31px] -translate-y-1/2')}
 
               /* Ajuste por Icono cuando NO flota */
@@ -92,7 +92,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
           onBlur={() => setIsFocused(false)}
           onChange={handleChange}
           disabled={disabled}
-          placeholder={isFocused && isFloating ? placeholder : ""} 
+          placeholder={isFocused && isFloating ? placeholder : ""}
           style={{ ...kd } as CSSProperties}
           className={`
             ${getVariantClasses()}
@@ -107,7 +107,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 
         {/* Botón de Limpiar */}
         {value && onClear && !disabled && (
-          <button 
+          <button
             type="button"
             onClick={onClear}
             className={`absolute right-0 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors z-20
@@ -117,7 +117,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
           </button>
         )}
       </div>
-      
+
       {error && <span className="text-[10px] font-bold text-red-500 ml-1 uppercase tracking-tight animate-in slide-in-from-top-1 duration-200">{error}</span>}
     </div>
   );

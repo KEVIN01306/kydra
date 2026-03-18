@@ -1,12 +1,15 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-entryPoints: {
+  entryPoints: {
     index: 'src/index.ts',
     'Button/index': 'src/components/Button/index.ts',
     'Checkbox/index': 'src/components/Checkbox/index.ts',
+    'Input/index': 'src/components/Input/index.ts',
+    'Nav/index': 'src/components/Nav.tsx',
+    'Table/index': 'src/components/Table.tsx',
   },
-  outDir: 'kyd',
+  outDir: 'dist',
   format: ['cjs', 'esm'], // Genera archivos para Node antiguo y moderno
   dts: true,             // Genera los archivos de tipos (.d.ts) automáticamente
   clean: true,           // Limpia la carpeta dist antes de cada build
